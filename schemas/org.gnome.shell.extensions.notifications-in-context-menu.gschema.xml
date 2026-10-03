@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.notifications-in-context-menu" path="/org/gnome/shell/extensions/notifications-in-context-menu/">
+    <key name="max-visible" type="i">
+      <default>5</default>
+      <summary>Máximo de notificações visíveis</summary>
+      <description>Número máximo de notificações exibidas no menu de contexto.</description>
+      <range min="1" max="20"/>
+    </key>
+    <key name="truncate-length" type="i">
+      <default>80</default>
+      <summary>Comprimento do texto</summary>
+      <description>Caracteres antes de truncar o texto.</description>
+      <range min="20" max="200"/>
+    </key>
+    <key name="show-clear-all" type="b">
+      <default>true</default>
+      <summary>Mostrar limpar tudo</summary>
+      <description>Mostra ou oculta a opção Limpar todas as notificações.</description>
+    </key>
+    <key name="show-notifications-area" type="b">
+      <default>true</default>
+      <summary>Mostrar área de notificações</summary>
+      <description>Exibe a área de notificações no menu de contexto dos apps, mesmo quando vazia.</description>
+    </key>
+  </schema>
+</schemalist>

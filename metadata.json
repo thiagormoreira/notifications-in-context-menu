@@ -1,0 +1,15 @@
+{
+  "uuid": "notifications-in-context-menu@loganguns",
+  "name": "Notifications in App Context Menu",
+  "description": "Add app notifications to app context menu (Dock/Dash and App Grid).",
+  "shell-version": [
+    "45",
+    "46",
+    "47",
+    "48",
+    "49",
+    "50"
+  ],
+  "url": "",
+  "version": 2
+}
