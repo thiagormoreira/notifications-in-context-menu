@@ -3,7 +3,6 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import * as AppMenuModule from 'resource:///org/gnome/shell/ui/appMenu.js';
 import Shell from 'gi://Shell';
-import Gio from 'gi://Gio';
 
 const INJECTED_MARKER = '_notificationsInContextItems';
 
@@ -12,17 +11,6 @@ export default class NotificationsInContextMenuExtension extends Extension {
         super(metadata);
         this._originalOpen = null;
         this._patchedOpen = null;
-    }
-
-    _debug(msg) {
-        try {
-            const file = Gio.File.new_for_path('/tmp/notify-ext-debug.txt');
-            const os = file.append_to(Gio.FileCreateFlags.NONE, null);
-            const text = new Date().toLocaleTimeString() + ': ' + msg + '\n';
-            const bytes = new TextEncoder().encode(text);
-            os.write(bytes, null);
-            os.close(null);
-        } catch (e) {}
     }
 
     _truncateText(text, maxLength) {
@@ -49,11 +37,9 @@ export default class NotificationsInContextMenuExtension extends Extension {
         }
         let messageTray = Main.messageTray;
         if (!messageTray || typeof messageTray.getSources !== 'function') {
-            this._debug('No messageTray or getSources');
             return [];
         }
         let sources = messageTray.getSources();
-        this._debug('Sources: ' + sources.length + ' | appId=' + appId + ' appName=' + appName);
         let notifications = [];
         let normalizedAppId = this._normalizeAppId(appId);
 
@@ -69,29 +55,24 @@ export default class NotificationsInContextMenuExtension extends Extension {
 
             if (sourceApp && app === sourceApp) {
                 match = true;
-                this._debug('Match by same app object: ' + sourceAppId);
             }
 
             let normalizedSourceId = this._normalizeAppId(sourceAppId);
             if (!match && normalizedAppId && normalizedSourceId) {
                 if (normalizedSourceId === normalizedAppId) {
                     match = true;
-                    this._debug('Match by id equal: ' + normalizedSourceId);
                 } else if (normalizedSourceId.includes(normalizedAppId) || normalizedAppId.includes(normalizedSourceId)) {
                     match = true;
-                    this._debug('Match by id contains: src=' + normalizedSourceId + ' app=' + normalizedAppId);
                 }
             }
 
             if (!match && appName && sourceName) {
                 if (sourceName === appName) {
                     match = true;
-                    this._debug('Match by name: ' + appName);
                 }
             }
 
             if (!match) {
-                this._debug('No match: srcId=' + sourceAppId + '(' + normalizedSourceId + ') srcName=' + sourceName);
                 continue;
             }
 
@@ -102,10 +83,8 @@ export default class NotificationsInContextMenuExtension extends Extension {
                 sourceNotifications = Object.values(source._notifications);
             }
             if (!sourceNotifications) {
-                this._debug('Match but notifications not an array: ' + typeof sourceNotifications);
                 continue;
             }
-            this._debug('Found ' + sourceNotifications.length + ' notifications for match');
             for (let j = 0; j < sourceNotifications.length; j++) {
                 notifications.push(sourceNotifications[j]);
             }
@@ -132,24 +111,13 @@ export default class NotificationsInContextMenuExtension extends Extension {
 
     _injectNotificationsIntoMenu(menu, app) {
         if (!menu || !app) return;
-        this._debug('--- injectNotificationsIntoMenu ---');
         let notifications = this._getAppNotifications(app);
-        this._debug('Total notifications to inject: ' + notifications.length);
 
-        let settings = null;
-        try {
-            settings = this.getSettings();
-        } catch (e) {}
-        let maxVisible = 5;
-        let truncateLength = 80;
-        let showClearAll = true;
-        let showArea = true;
-        if (settings) {
-            try { maxVisible = settings.get_int('max-visible'); } catch (e) {}
-            try { truncateLength = settings.get_int('truncate-length'); } catch (e) {}
-            try { showClearAll = settings.get_boolean('show-clear-all'); } catch (e) {}
-            try { showArea = settings.get_boolean('show-notifications-area'); } catch (e) {}
-        }
+        const settings = this.getSettings();
+        let maxVisible = settings.get_int('max-visible');
+        let truncateLength = settings.get_int('truncate-length');
+        let showClearAll = settings.get_boolean('show-clear-all');
+        let showArea = settings.get_boolean('show-notifications-area');
         if (!showArea) return;
 
         let firstSeparator = new PopupMenu.PopupSeparatorMenuItem();
@@ -225,38 +193,31 @@ export default class NotificationsInContextMenuExtension extends Extension {
         if (!menu) return;
         const src = menu.sourceActor;
         const app = menu._app ?? src?.app ?? src?._delegate?.app ?? src?._delegate?._app ?? null;
-        this._debug('menu probe: _app=' + (!!menu._app) + ' src=' + (src?.constructor?.name ?? '?') + ' src.app=' + (!!src?.app) + ' delegate=' + (src?._delegate?.constructor?.name ?? '?') + ' del.app=' + (!!src?._delegate?.app));
         if (!app || !(app instanceof Shell.App)) return;
-        this._debug('open() on app menu for ' + (app.get_id?.() ?? '?'));
         try {
             this._clearInjectedItems(menu);
             this._injectNotificationsIntoMenu(menu, app);
         } catch (e) {
-            this._debug('inject error: ' + e);
         }
     }
 
     enable() {
-        try { Gio.File.new_for_path('/tmp/notify-ext-debug.txt').delete(null); } catch (e) {}
-        this._debug('Extension enabled');
 
         this._originalOpen = PopupMenu.PopupMenu.prototype.open;
         const originalOpen = this._originalOpen;
-        const _dbg = msg => this._debug(msg);
         const maybeInject = menu => this._maybeInject(menu);
         this._patchedOpen = function(...args) {
-            try { _dbg('open() called, ctor=' + (this.constructor?.name ?? '?')); maybeInject(this); } catch (e) {}
+            try { maybeInject(this); } catch (e) {}
             return originalOpen.apply(this, args);
         };
         PopupMenu.PopupMenu.prototype.open = this._patchedOpen;
         this._originalAppMenuOpen = AppMenuModule.AppMenu.prototype.open;
         const originalAppMenuOpen = this._originalAppMenuOpen;
         this._patchedAppMenuOpen = function(...args) {
-            try { _dbg('AppMenu open() called, ctor=' + (this.constructor?.name ?? '?')); maybeInject(this); } catch (e) {}
+            try { maybeInject(this); } catch (e) {}
             return originalAppMenuOpen.apply(this, args);
         };
         AppMenuModule.AppMenu.prototype.open = this._patchedAppMenuOpen;
-        this._debug('open() patched (original=' + (typeof originalOpen) + ')');
     }
 
     disable() {

@@ -5,21 +5,13 @@ import GLib from 'gi://GLib';
 
 import { ExtensionPreferences } from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
-const SCHEMA_ID = 'org.gnome.shell.extensions.notifications-in-context-menu';
 const PIX_KEY = 'loganguns@gmail.com';
 const KOFI_URL = 'https://ko-fi.com/loganguns';
 const GITHUB_SPONSORS_URL = 'https://github.com/sponsors/thiagormoreira';
 
 export default class NotificationsInContextMenuPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
-        const schemaPath = GLib.build_filenamev([this.path, 'schemas']);
-        const schemaSource = Gio.SettingsSchemaSource.new_from_directory(
-            schemaPath,
-            Gio.SettingsSchemaSource.get_default(),
-            false
-        );
-        const schema = schemaSource.lookup(SCHEMA_ID, true);
-        const settings = new Gio.Settings({ settings_schema: schema });
+        const settings = this.getSettings();
         const meta = this.metadata;
 
         // General page
